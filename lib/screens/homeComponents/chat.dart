@@ -97,7 +97,7 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
         ],
       ),
-      if (_groupCode != null)
+      if (_groupCode != null) // Display group code below the group name
         Padding(
           padding: const EdgeInsets.only(top: 4.0), // Adds some space between group name and code
           child: Text(

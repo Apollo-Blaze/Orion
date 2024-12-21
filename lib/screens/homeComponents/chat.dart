@@ -77,45 +77,56 @@ class _ChatScreenState extends State<ChatScreen> {
     return Scaffold(
       backgroundColor: Color.fromARGB(255, 10, 19, 42),
       appBar: AppBar(
-  title: Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Row(
+      title: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CircleAvatar(
-            radius: 20,
-            backgroundColor: Colors.blueAccent,
-            child: Text(
-              _groupName != null ? _groupName![0].toUpperCase() : '',
-              style: TextStyle(color: Colors.white),
-            ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 4.0), // Adjust to move avatar lower
+                child: CircleAvatar(
+                  radius: 20,
+                  backgroundColor: Colors.blueAccent,
+                  child: Text(
+                    _groupName != null ? _groupName![0].toUpperCase() : '',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+              ),
+              SizedBox(width: 12),
+              Column(children: [
+                Text(
+                _groupName ?? 'Group Chat',
+                style: TextStyle(
+                  color: const Color.fromARGB(255, 255, 255, 255),
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold
+                ),
+              ),
+              if (_groupCode != null) // Display group code if it's not null
+              Text(
+                _groupCode!,
+                style: TextStyle(
+                  color: const Color.fromARGB(250, 124, 47, 191),
+                  fontSize: 10, // Smaller font for group code
+                ),
+              ),
+              ],
+              
+              )
+              
+            ],
           ),
-          SizedBox(width: 8),
-          Text(
-            _groupName ?? 'Group Chat',
-            style: TextStyle(color: const Color.fromARGB(255, 116, 223, 245)),
-          ),
+          
         ],
       ),
-      if (_groupCode != null) // Display group code below the group name
-        Padding(
-          padding: const EdgeInsets.only(top: 4.0), // Adds some space between group name and code
-          child: Text(
-            _groupCode!,
-            style: TextStyle(
-              color: Colors.white70,
-              fontSize: 12, // Make the group code smaller
-            ),
-          ),
-        ),
-    ],
-  ),
-  backgroundColor: const Color.fromARGB(255, 5, 1, 25),
-  leading: IconButton(
-    icon: Icon(Icons.arrow_back, color: const Color.fromARGB(255, 116, 223, 245)),
-    onPressed: () => Navigator.pop(context),
-  ),
-),
+      backgroundColor: const Color.fromARGB(255, 5, 1, 25),
+      leading: IconButton(
+        icon: Icon(Icons.arrow_back, color: const Color.fromARGB(250, 124, 47, 191)),
+        onPressed: () => Navigator.pop(context),
+      ),
+    ),
       body: Column(
         children: [
           Expanded(

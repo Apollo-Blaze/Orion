@@ -8,13 +8,44 @@ class ChatsScreen extends StatefulWidget {
   _ChatsScreenState createState() => _ChatsScreenState();
 }
 
-class _ChatsScreenState extends State<ChatsScreen> {
+class _ChatsScreenState extends State<ChatsScreen> with TickerProviderStateMixin {
   List<Map<String, dynamic>> _joinedGroups = []; // List to store group info (id and name)
+  List<Map<String, dynamic>> _filteredGroups = []; // List to store filtered groups based on search query
+
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _focusNode = FocusNode();
+  late AnimationController _fadeController;
+  late Animation<double> _fadeAnimation;
 
   @override
   void initState() {
     super.initState();
+
+    // Initialize the fade-in animation
+    _fadeController = AnimationController(
+      vsync: this,
+      duration: Duration(milliseconds: 400),
+    );
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _fadeController, curve: Curves.easeIn),
+    );
+
+    _fadeController.forward();
+
+    // Fetch the current groups and initialize the filtered list
     _loadJoinedGroups();
+
+    // Add listener for search input changes
+    _searchController.addListener(_filterGroups);
+  }
+
+  @override
+  void dispose() {
+    _fadeController.dispose();
+    _searchController.dispose();
+    _focusNode.dispose();
+    super.dispose();
   }
 
   // Fetch current user ID (UID) from FirebaseAuth
@@ -39,17 +70,19 @@ class _ChatsScreenState extends State<ChatsScreen> {
             .doc(userId) // Use the dynamic userId
             .get();
 
-        // Check if user has any joined groups
         if (snapshot.exists && snapshot.data()?['joined_groups'] != null) {
-          final joinedGroupIds = List<String>.from(snapshot.data()!['joined_groups']);
+          final joinedGroupIds =
+              List<String>.from(snapshot.data()!['joined_groups']);
 
           List<Map<String, dynamic>> groups = [];
           for (var groupId in joinedGroupIds) {
-            final groupDoc = await FirebaseFirestore.instance.collection('groups').doc(groupId).get();
+            final groupDoc = await FirebaseFirestore.instance
+                .collection('groups')
+                .doc(groupId)
+                .get();
 
             if (groupDoc.exists) {
-              final groupName = groupDoc['groupName']; // Fetch the group name from the group document
-
+              final groupName = groupDoc['groupName'];
               groups.add({
                 'groupId': groupId,
                 'groupName': groupName,
@@ -60,11 +93,13 @@ class _ChatsScreenState extends State<ChatsScreen> {
           }
 
           setState(() {
-            _joinedGroups = groups; // List of group info (id and name)
+            _joinedGroups = groups;
+            _filteredGroups = groups; // Initially show all groups
           });
         } else {
           setState(() {
             _joinedGroups = [];
+            _filteredGroups = [];
           });
         }
       } else {
@@ -75,12 +110,25 @@ class _ChatsScreenState extends State<ChatsScreen> {
     }
   }
 
+  // Filter groups based on the search query
+  void _filterGroups() {
+    String query = _searchController.text.toLowerCase();
+    setState(() {
+      _filteredGroups = _joinedGroups
+          .where((group) =>
+              group['groupName']?.toLowerCase().contains(query) ?? false)
+          .toList();
+    });
+  }
+
   // Create a new group with a dialog to enter a group name and generate a 6-digit code
   void _createGroup() async {
     String groupName = '';
-    String groupCode = DateTime.now().millisecondsSinceEpoch.toString().substring(0, 6); // Create a 6-digit code
+    String groupCode = DateTime.now()
+        .millisecondsSinceEpoch
+        .toString()
+        .substring(0, 6); // Create a 6-digit code
 
-    // Show dialog to ask for the group name
     showDialog(
       context: context,
       builder: (context) {
@@ -93,11 +141,17 @@ class _ChatsScreenState extends State<ChatsScreen> {
             decoration: InputDecoration(hintText: 'Enter Group Name'),
           ),
           actions: <Widget>[
+                        TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: Text('Cancel'),
+            ),
             TextButton(
               onPressed: () async {
                 if (groupName.isNotEmpty) {
-                  // Create the group in Firestore
-                  final groupRef = FirebaseFirestore.instance.collection('groups').doc();
+                  final groupRef =
+                      FirebaseFirestore.instance.collection('groups').doc();
                   await groupRef.set({
                     'groupId': groupRef.id,
                     'groupName': groupName,
@@ -105,16 +159,16 @@ class _ChatsScreenState extends State<ChatsScreen> {
                     'createdAt': Timestamp.now(),
                   });
 
-                  // Fetch the current userId and save the group to the user's joined groups
                   final userId = await _getCurrentUserId();
                   if (userId != null) {
-                    final userRef = FirebaseFirestore.instance.collection('users').doc(userId);
+                    final userRef = FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(userId);
                     await userRef.update({
-                      'joined_groups': FieldValue.arrayUnion([groupRef.id]), // Add groupId to joined_groups list
+                      'joined_groups': FieldValue.arrayUnion([groupRef.id]),
                     });
                   }
 
-                  // Navigate to the ChatScreen with the newly created group
                   Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -122,84 +176,80 @@ class _ChatsScreenState extends State<ChatsScreen> {
                     ),
                   );
                 } else {
-                  // Show error if the group name is empty
                   Navigator.pop(context);
                   _showErrorDialog('Please enter a valid group name');
                 }
               },
               child: Text('Create'),
             ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context); // Close the dialog
-              },
-              child: Text('Cancel'),
-            ),
+
           ],
         );
       },
     );
   }
 
-  // Function to join an existing group by entering a code
+  // Join an existing group by entering a group code
   void _joinGroup() async {
-    // Show dialog to prompt for the 6-digit group code
-    String groupCode = '';
+    String groupCode = ''; // Prompt the user to enter a group code
+
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text('Enter Group Code'),
+          title: Text('Join Existing Group'),
           content: TextField(
             onChanged: (value) {
               groupCode = value;
             },
-            keyboardType: TextInputType.number,
-            decoration: InputDecoration(hintText: '6-digit code'),
+            decoration: InputDecoration(hintText: 'Enter Group Code'),
           ),
           actions: <Widget>[
+                        TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: Text('Cancel'),
+            ),
             TextButton(
               onPressed: () async {
-                // Check if the group exists
-                final groupSnapshot = await FirebaseFirestore.instance
-                    .collection('groups')
-                    .where('groupCode', isEqualTo: groupCode)
-                    .limit(1)
-                    .get();
+                if (groupCode.isNotEmpty) {
+                  // Check if the group with the entered code exists
+                  final groupQuery = await FirebaseFirestore.instance
+                      .collection('groups')
+                      .where('groupCode', isEqualTo: groupCode)
+                      .limit(1)
+                      .get();
 
-                if (groupSnapshot.docs.isNotEmpty) {
-                  // Join the group if it exists
-                  final groupId = groupSnapshot.docs.first.id;
+                  if (groupQuery.docs.isNotEmpty) {
+                    final groupId = groupQuery.docs.first.id;
+                    final groupName = groupQuery.docs.first['groupName'];
 
-                  // Fetch the current userId and add to the user's joined groups
-                  final userId = await _getCurrentUserId();
-                  if (userId != null) {
-                    final userRef = FirebaseFirestore.instance.collection('users').doc(userId);
-                    await userRef.update({
-                      'joined_groups': FieldValue.arrayUnion([groupId]), // Add groupId to joined_groups list
-                    });
+                    // Add the user to the group
+                    final userId = await _getCurrentUserId();
+                    if (userId != null) {
+                      final userRef = FirebaseFirestore.instance.collection('users').doc(userId);
+                      await userRef.update({
+                        'joined_groups': FieldValue.arrayUnion([groupId]),
+                      });
+
+                      // Navigate to the chat screen
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ChatScreen(groupId: groupId),
+                        ),
+                      );
+                    }
+                  } else {
+                    _showErrorDialog('Group not found or invalid code');
                   }
-
-                  // Navigate to the ChatScreen with the joined group
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ChatScreen(groupId: groupId),
-                    ),
-                  );
                 } else {
-                  // Show error if the group code is invalid
                   Navigator.pop(context);
-                  _showErrorDialog('Invalid Group Code');
+                  _showErrorDialog('Please enter a valid group code');
                 }
               },
               child: Text('Join'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context); // Close the dialog
-              },
-              child: Text('Cancel'),
             ),
           ],
         );
@@ -207,7 +257,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
     );
   }
 
-  // Show an error dialog
+  // Show error dialog
   void _showErrorDialog(String message) {
     showDialog(
       context: context,
@@ -218,7 +268,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
           actions: <Widget>[
             TextButton(
               onPressed: () {
-                Navigator.pop(context); // Close the dialog
+                Navigator.pop(context);
               },
               child: Text('OK'),
             ),
@@ -231,46 +281,112 @@ class _ChatsScreenState extends State<ChatsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Your Groups'),
-        backgroundColor: Colors.blueAccent,
-      ),
-      body: ListView.builder(
-        itemCount: _joinedGroups.length, // Only show joined groups
-        itemBuilder: (context, index) {
-          final group = _joinedGroups[index];
-
-          // Display the joined group with the group name
-          return ListTile(
-            title: Text(group['groupName'] ?? 'No Group Name'),
-            subtitle: Text('Joined Group'),
-            onTap: () {
-              // Navigate to the ChatScreen for the selected group
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => ChatScreen(groupId: group['groupId']),
+      backgroundColor: Color.fromARGB(255, 10, 19, 42),
+      body: Stack(
+        children: [
+          // Main content (search bar, group list)
+          Column(
+            children: [
+              FadeTransition(
+                opacity: _fadeAnimation,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: TextField(
+                    controller: _searchController,
+                    focusNode: _focusNode,
+                    decoration: InputDecoration(
+                      hintText: 'Search groups',
+                      hintStyle: TextStyle(color: Colors.white54),
+                      filled: true,
+                      fillColor: Color.fromARGB(113, 63, 63, 63),
+                      prefixIcon: _focusNode.hasFocus
+                          ? IconButton(
+                              icon: Icon(Icons.arrow_back, color: Colors.white),
+                              onPressed: () {
+                                _focusNode.unfocus();
+                                _searchController.clear();
+                              },
+                            )
+                          : Icon(Icons.search, color: Colors.white),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(30.0),
+                        borderSide: BorderSide.none,
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(30.0),
+                        borderSide: BorderSide.none,
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(30.0),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                    style: TextStyle(color: Colors.white),
+                    onTap: () {
+                      _focusNode.requestFocus();
+                    },
+                  ),
                 ),
-              );
-            },
-          );
-        },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _createGroup, // Create a new group when the button is pressed
-        child: Icon(Icons.add),
-        backgroundColor: Colors.blueAccent,
-      ),
-      bottomSheet: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: ElevatedButton(
-          onPressed: _joinGroup, // Join an existing group when the button is pressed
-          child: Text('Join Existing Group'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.blueAccent,
-            padding: EdgeInsets.symmetric(vertical: 16),
+              ),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: _filteredGroups.length,
+                  itemBuilder: (context, index) {
+                    final group = _filteredGroups[index];
+                    return ListTile(
+                      title: Text(
+                        group['groupName'] ?? 'No Group Name',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18),
+                      ),
+                      subtitle: Text(
+                        'Joined Group',
+                        style: TextStyle(color: Colors.white70),
+                      ),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                ChatScreen(groupId: group['groupId']),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
           ),
-        ),
+          // Positioned buttons (Create and Join)
+          Positioned(
+            bottom: 16.0,
+            right: 16.0,
+            child: Column(
+              children: [
+                CircleAvatar(
+                  radius: 30.0,
+                  backgroundColor: const Color.fromARGB(255, 46, 232, 245),
+                  child: IconButton(
+                    icon: Icon(Icons.add, color: Colors.white),
+                    onPressed: _createGroup,
+                  ),
+                ),
+                SizedBox(height: 8.0),
+                CircleAvatar(
+                  radius: 30.0,
+                  backgroundColor: const Color.fromARGB(255, 120, 220, 62),
+                  child: IconButton(
+                    icon: Icon(Icons.group_add, color: Colors.white),
+                    onPressed: _joinGroup,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -17,12 +17,13 @@ class _ChatScreenState extends State<ChatScreen> {
   ScrollController _scrollController = ScrollController();
   String _userName = 'User'; // Default name
   String? _groupName;
+  String? _groupCode; // Store the groupCode here
 
   @override
   void initState() {
     super.initState();
     _loadUserName(); // Load username when the screen is initialized
-    _loadGroupName(); // Load group name from Firestore
+    _loadGroupName(); // Load group name and code from Firestore
   }
 
   void _loadUserName() async {
@@ -38,6 +39,7 @@ class _ChatScreenState extends State<ChatScreen> {
     if (doc.exists) {
       setState(() {
         _groupName = doc['groupName']; // Assuming groupCode is used as the name
+        _groupCode = doc['groupCode']; // Load groupCode from Firestore
       });
     }
   }
@@ -75,13 +77,45 @@ class _ChatScreenState extends State<ChatScreen> {
     return Scaffold(
       backgroundColor: Color.fromARGB(255, 10, 19, 42),
       appBar: AppBar(
-        title: Text(_groupName ?? 'Group Chat'),
-        backgroundColor: Colors.blueAccent,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
+  title: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Row(
+        children: [
+          CircleAvatar(
+            radius: 20,
+            backgroundColor: Colors.blueAccent,
+            child: Text(
+              _groupName != null ? _groupName![0].toUpperCase() : '',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+          SizedBox(width: 8),
+          Text(
+            _groupName ?? 'Group Chat',
+            style: TextStyle(color: const Color.fromARGB(255, 116, 223, 245)),
+          ),
+        ],
       ),
+      if (_groupCode != null)
+        Padding(
+          padding: const EdgeInsets.only(top: 4.0), // Adds some space between group name and code
+          child: Text(
+            _groupCode!,
+            style: TextStyle(
+              color: Colors.white70,
+              fontSize: 12, // Make the group code smaller
+            ),
+          ),
+        ),
+    ],
+  ),
+  backgroundColor: const Color.fromARGB(255, 5, 1, 25),
+  leading: IconButton(
+    icon: Icon(Icons.arrow_back, color: const Color.fromARGB(255, 116, 223, 245)),
+    onPressed: () => Navigator.pop(context),
+  ),
+),
       body: Column(
         children: [
           Expanded(
@@ -154,7 +188,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                       sender,
                                       style: TextStyle(
                                         color: isCurrentUser
-                                            ? const Color.fromARGB(255, 23, 2, 57)
+                                            ? const Color.fromARGB(255, 35, 6, 82)
                                             : const Color.fromARGB(255, 220, 220, 220),
                                         fontWeight: FontWeight.bold,
                                         fontSize: 10,
@@ -165,7 +199,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                       message,
                                       style: TextStyle(
                                         color: isCurrentUser
-                                            ? const Color.fromARGB(255, 23, 2, 57)
+                                            ? const Color.fromARGB(255, 35, 6, 82)
                                             : const Color.fromARGB(255, 220, 220, 220),
                                         fontSize: 16,
                                       ),
@@ -213,7 +247,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                 ),
                 IconButton(
-                  icon: Icon(Icons.send, color: Colors.blueAccent),
+                  icon: Icon(Icons.send, color: const Color.fromARGB(255, 81, 18, 123)),
                   onPressed: () => _sendMessage(_messageController.text),
                 ),
               ],

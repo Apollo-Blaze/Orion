@@ -175,8 +175,8 @@ class ReferencesScreen extends StatelessWidget {
                 final timestamp = reference['createdAt'] as Timestamp?;
 
                 return Card(
-                  color: const Color.fromARGB(255, 15, 25, 55),
-                  margin: const EdgeInsets.symmetric(vertical: 6),
+                  color: const Color.fromARGB(255, 3, 10, 40),
+                  margin: const EdgeInsets.symmetric(vertical: 10),
                   elevation: 2,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -208,7 +208,7 @@ class ReferencesScreen extends StatelessWidget {
                                   children: [
                                     const Icon(
                                       Icons.link,
-                                      color: Colors.blue,
+                                      color: Color.fromARGB(255, 33, 198, 243),
                                       size: 16,
                                     ),
                                     const SizedBox(width: 8),
@@ -216,7 +216,7 @@ class ReferencesScreen extends StatelessWidget {
                                       child: Text(
                                         url,
                                         style: const TextStyle(
-                                          color: Colors.blue,
+                                          color: Color.fromARGB(255, 33, 222, 243),
                                           decoration: TextDecoration.underline,
                                         ),
                                         maxLines: 2,
@@ -235,7 +235,7 @@ class ReferencesScreen extends StatelessWidget {
                               Text(
                                 _formatDateTime(timestamp.toDate()),
                                 style: TextStyle(
-                                  color: Colors.white.withOpacity(0.6),
+                                  color: const Color.fromARGB(255, 206, 98, 201).withOpacity(0.8),
                                   fontSize: 12,
                                 ),
                               ),

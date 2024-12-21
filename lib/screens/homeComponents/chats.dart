@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'chat.dart'; // Import the chat screen to navigate to the specific group
+import 'package:orion/components/loader2.dart';
+import 'chat.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class ChatsScreen extends StatefulWidget {
@@ -9,8 +10,9 @@ class ChatsScreen extends StatefulWidget {
 }
 
 class _ChatsScreenState extends State<ChatsScreen> with TickerProviderStateMixin {
-  List<Map<String, dynamic>> _joinedGroups = []; // List to store group info (id and name)
-  List<Map<String, dynamic>> _filteredGroups = []; // List to store filtered groups based on search query
+  List<Map<String, dynamic>> _joinedGroups = [];
+  List<Map<String, dynamic>> _filteredGroups = [];
+  bool _isLoading = true; // Add loading state
 
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
@@ -21,7 +23,6 @@ class _ChatsScreenState extends State<ChatsScreen> with TickerProviderStateMixin
   void initState() {
     super.initState();
 
-    // Initialize the fade-in animation
     _fadeController = AnimationController(
       vsync: this,
       duration: Duration(milliseconds: 400),
@@ -32,12 +33,10 @@ class _ChatsScreenState extends State<ChatsScreen> with TickerProviderStateMixin
     );
 
     _fadeController.forward();
-
-    // Fetch the current groups and initialize the filtered list
-    _loadJoinedGroups();
-
-    // Add listener for search input changes
     _searchController.addListener(_filterGroups);
+    
+    // Load groups
+    _loadJoinedGroups();
   }
 
   @override
@@ -48,31 +47,32 @@ class _ChatsScreenState extends State<ChatsScreen> with TickerProviderStateMixin
     super.dispose();
   }
 
-  // Fetch current user ID (UID) from FirebaseAuth
   Future<String?> _getCurrentUserId() async {
-    User? user = FirebaseAuth.instance.currentUser; // Get the current user
+    User? user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      return user.uid; // Return the userId (UID)
+      return user.uid;
     } else {
       print('No user is currently logged in');
       return null;
     }
   }
 
-  // Load the joined groups from Firestore
   void _loadJoinedGroups() async {
+    setState(() {
+      _isLoading = true; // Start loading
+    });
+
     try {
-      final userId = await _getCurrentUserId(); // Await the userId
+      final userId = await _getCurrentUserId();
 
       if (userId != null) {
         final snapshot = await FirebaseFirestore.instance
             .collection('users')
-            .doc(userId) // Use the dynamic userId
+            .doc(userId)
             .get();
 
         if (snapshot.exists && snapshot.data()?['joined_groups'] != null) {
-          final joinedGroupIds =
-              List<String>.from(snapshot.data()!['joined_groups']);
+          final joinedGroupIds = List<String>.from(snapshot.data()!['joined_groups']);
 
           List<Map<String, dynamic>> groups = [];
           for (var groupId in joinedGroupIds) {
@@ -87,29 +87,41 @@ class _ChatsScreenState extends State<ChatsScreen> with TickerProviderStateMixin
                 'groupId': groupId,
                 'groupName': groupName,
               });
-            } else {
-              print("Group not found for id: $groupId");
             }
           }
 
-          setState(() {
-            _joinedGroups = groups;
-            _filteredGroups = groups; // Initially show all groups
-          });
+          if (mounted) {
+            setState(() {
+              _joinedGroups = groups;
+              _filteredGroups = groups;
+              _isLoading = false; // Stop loading
+            });
+          }
         } else {
-          setState(() {
-            _joinedGroups = [];
-            _filteredGroups = [];
-          });
+          if (mounted) {
+            setState(() {
+              _joinedGroups = [];
+              _filteredGroups = [];
+              _isLoading = false; // Stop loading
+            });
+          }
         }
       } else {
-        print('No user ID available');
+        if (mounted) {
+          setState(() {
+            _isLoading = false; // Stop loading
+          });
+        }
       }
     } catch (e) {
       print("Error loading groups: $e");
+      if (mounted) {
+        setState(() {
+          _isLoading = false; // Stop loading even on error
+        });
+      }
     }
   }
-
   // Filter groups based on the search query
   void _filterGroups() {
     String query = _searchController.text.toLowerCase();
@@ -278,13 +290,13 @@ class _ChatsScreenState extends State<ChatsScreen> with TickerProviderStateMixin
     );
   }
 
+  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Color.fromARGB(255, 10, 19, 42),
       body: Stack(
         children: [
-          // Main content (search bar, group list)
           Column(
             children: [
               FadeTransition(
@@ -328,39 +340,67 @@ class _ChatsScreenState extends State<ChatsScreen> with TickerProviderStateMixin
                   ),
                 ),
               ),
+              SizedBox(height: 15),
               Expanded(
-                child: ListView.builder(
-                  itemCount: _filteredGroups.length,
-                  itemBuilder: (context, index) {
-                    final group = _filteredGroups[index];
-                    return ListTile(
-                      title: Text(
-                        group['groupName'] ?? 'No Group Name',
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18),
-                      ),
-                      subtitle: Text(
-                        'Joined Group',
-                        style: TextStyle(color: Colors.white70),
-                      ),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                ChatScreen(groupId: group['groupId']),
+                child: _isLoading
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            CustomLoader_2(3),
+                            SizedBox(height: 16),
+                            Text(
+                              'Loading your groups...',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : _filteredGroups.isEmpty
+                        ? Center(
+                            child: Text(
+                              'No groups found',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 16,
+                              ),
+                            ),
+                          )
+                        : ListView.builder(
+                            itemCount: _filteredGroups.length,
+                            itemBuilder: (context, index) {
+                              final group = _filteredGroups[index];
+                              return ListTile(
+                                title: Text(
+                                  group['groupName'] ?? 'No Group Name',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  'Joined Group',
+                                  style: TextStyle(color: Colors.white70),
+                                ),
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          ChatScreen(groupId: group['groupId']),
+                                    ),
+                                  );
+                                },
+                              );
+                            },
                           ),
-                        );
-                      },
-                    );
-                  },
-                ),
               ),
             ],
           ),
-          // Positioned buttons (Create and Join)
           Positioned(
             bottom: 16.0,
             right: 16.0,

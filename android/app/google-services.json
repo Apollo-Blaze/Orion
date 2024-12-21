@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "938814996314",
+    "project_id": "orion-4b3ff",
+    "storage_bucket": "orion-4b3ff.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:938814996314:android:ab1067ed766fa2d5e2fd63",
+        "android_client_info": {
+          "package_name": "com.example.orion"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "938814996314-9rd836t69pp6hq3bte7hk5qatcl51bl9.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCKE-7kD_WfTuaOsK1THisXVW3x3DM6r6s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "938814996314-9rd836t69pp6hq3bte7hk5qatcl51bl9.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

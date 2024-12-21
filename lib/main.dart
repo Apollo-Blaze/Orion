@@ -69,14 +69,14 @@ class UOMEApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        brightness: Brightness.light,
-        primaryColor: Colors.blueAccent,
+        brightness: Brightness.dark,
+        primaryColor: Color.fromARGB(255, 6, 13, 33),
         textTheme: GoogleFonts.poppinsTextTheme(
           Theme.of(context).textTheme, // Integrates Poppins across the text theme
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.blueAccent,
+            backgroundColor: const Color.fromARGB(255, 24, 4, 39),
             foregroundColor: Colors.white,
             textStyle: TextStyle(fontWeight: FontWeight.bold),
           ),

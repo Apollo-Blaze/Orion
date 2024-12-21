@@ -18,28 +18,11 @@ class ReferencesScreen extends StatelessWidget {
       }
 
       final Uri uri = Uri.parse(cleanUrl);
-      
-      // Try launching with universal_links first
+
       bool launched = await launchUrl(
         uri,
-        mode: LaunchMode.externalNonBrowserApplication,
+        mode: LaunchMode.externalApplication,
       ).catchError((e) => false);
-
-      // If that fails, try launching in external browser
-      if (!launched) {
-        launched = await launchUrl(
-          uri,
-          mode: LaunchMode.externalApplication,
-        ).catchError((e) => false);
-      }
-
-      // If both above methods fail, try platform default as last resort
-      if (!launched) {
-        launched = await launchUrl(
-          uri,
-          mode: LaunchMode.platformDefault,
-        ).catchError((e) => false);
-      }
 
       if (!launched) {
         throw 'Could not launch URL';
@@ -57,23 +40,52 @@ class ReferencesScreen extends StatelessWidget {
       }
     }
   }
-  void _showErrorSnackBar(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 3),
-        action: SnackBarAction(
-          label: 'Dismiss',
-          textColor: Colors.white,
-          onPressed: () {
-            ScaffoldMessenger.of(context).hideCurrentSnackBar();
-          },
+
+  Future<void> _pinReference(BuildContext context, Map<String, dynamic> reference) async {
+  try {
+    // Extract necessary fields
+    final String summary = reference['summary'] as String? ?? '';
+    final String url = reference['urls'] as String? ?? '';
+    final DateTime sentAt = DateTime.now(); // Current timestamp
+
+    // Build the message structure
+    final Map<String, dynamic> messageData = {
+      'email': 'orion@orion.com',
+      'message': summary.isNotEmpty ? '$summary\n$url' : url,
+      'sender': 'Orion',
+      'sentAt': sentAt,
+    };
+
+    // Add the message to the 'messages' collection
+    await FirebaseFirestore.instance
+        .collection('groups')
+        .doc(groupId)
+        .collection('messages')
+        .add(messageData);
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Reference pinned successfully!'),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
         ),
-      ),
-    );
+      );
+    }
+  } catch (e) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error pinning reference: ${e.toString()}'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
   }
+}
 
   String _formatDateTime(DateTime dateTime) {
     return DateFormat('MMM d, y HH:mm').format(dateTime);
@@ -216,16 +228,23 @@ class ReferencesScreen extends StatelessWidget {
                               ),
                             ),
                           ),
-                        if (timestamp != null) ...[
-                          const SizedBox(height: 8),
-                          Text(
-                            _formatDateTime(timestamp.toDate()),
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(0.6),
-                              fontSize: 12,
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            if (timestamp != null)
+                              Text(
+                                _formatDateTime(timestamp.toDate()),
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.6),
+                                  fontSize: 12,
+                                ),
+                              ),
+                            IconButton(
+                              icon: const Icon(Icons.push_pin, color: Colors.green),
+                              onPressed: () => _pinReference(context, reference),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ],
                     ),
                   ),

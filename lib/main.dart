@@ -72,7 +72,10 @@ class UOMEApp extends StatelessWidget {
         brightness: Brightness.dark,
         primaryColor: Color.fromARGB(255, 6, 13, 33),
         textTheme: GoogleFonts.poppinsTextTheme(
-          Theme.of(context).textTheme, // Integrates Poppins across the text theme
+          Theme.of(context).textTheme.apply(
+              bodyColor: Colors.white, // Set the default text color to white
+              displayColor: Colors.white, // Apply white to display text
+            ),
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(

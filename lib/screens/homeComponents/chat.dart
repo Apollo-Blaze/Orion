@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';  // Import to handle JSON parsing
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:orion/screens/homeComponents/chatComponent/GeminiHandler.dart';
@@ -21,6 +22,7 @@ class _ChatScreenState extends State<ChatScreen> {
   final FocusNode _focusNode = FocusNode();
   ScrollController _scrollController = ScrollController();
   String _userName = 'User'; // Default name
+  String? _email ;
   String? _groupName;
   String? _groupCode; // Store the groupCode here
   bool _hasGeneratedResponse = false;
@@ -37,6 +39,7 @@ class _ChatScreenState extends State<ChatScreen> {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     setState(() {
       _userName = prefs.getString('name') ?? 'User'; // Retrieve stored name
+      _email= prefs.getString('email'); // Store email
     });
   }
 
@@ -76,6 +79,7 @@ class _ChatScreenState extends State<ChatScreen> {
       'message': message,
       'sentAt': Timestamp.now(),
       'sender': userName,
+      'email': _email
     });
 
     // Clear the text field
@@ -141,232 +145,266 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Color.fromARGB(255, 3, 11, 30),
-      appBar: AppBar(
-        backgroundColor: Color.fromARGB(255, 3, 11, 30),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(
-                      top: 4.0), // Adjust to move avatar lower
-                  child: CircleAvatar(
-                    radius: 20,
-                    backgroundColor: Colors.blueAccent,
-                    child: Text(
-                      _groupName != null ? _groupName![0].toUpperCase() : '',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                  ),
-                ),
-                SizedBox(width: 12),
-                Column(
-                  children: [
-                    Text(
-                      _groupName ?? 'Group Chat',
-                      style: TextStyle(
-                        color: const Color.fromARGB(255, 255, 255, 255),
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    if (_groupCode !=
-                        null) // Display group code if it's not null
-                      Text(
-                        _groupCode!,
-                        style: TextStyle(
-                          color: const Color.fromARGB(250, 124, 47, 191),
-                          fontSize: 10, // Smaller font for group code
-                        ),
-                      ),
-                  ],
-                ),
-              ],
-            ),
-          ],
-        ),
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back,
-              color: const Color.fromARGB(250, 124, 47, 191)),
-          onPressed: () => Navigator.pop(context),
-        ),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.article,
-                color: const Color.fromARGB(250, 124, 47, 191)),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) =>
-                        ReferencesScreen(groupId: widget.groupId)),
-              );
-            },
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          if (_hasGeneratedResponse) // Show notify icon below app bar
-            Container(
-              color: Colors.yellow.withOpacity(0.2),
-              padding: const EdgeInsets.symmetric(vertical: 10.0),
-              child: Center(
-                child: Icon(Icons.notifications_active, color: Colors.yellow),
-              ),
-            ),
-          Expanded(
-            child: StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('groups')
-                  .doc(widget.groupId)
-                  .collection('messages')
-                  .orderBy('sentAt', descending: true)
-                  .snapshots(),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData || snapshot.data == null) {
-                  return Center(
-                    child: Text(
-                      'No messages yet. Join or create a group.',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                  );
-                }
-                final messages = snapshot.data!.docs;
-                return ListView.builder(
-                  controller: _scrollController,
-                  reverse: true,
-                  itemCount: messages.length,
-                  itemBuilder: (context, index) {
-                    final message = messages[index]['message'];
-                    final sender = messages[index]['sender'];
-                    final sentAt =
-                        (messages[index]['sentAt'] as Timestamp).toDate();
-                    final isCurrentUser = sender == _userName;
+Widget build(BuildContext context) {
+  final backgroundColor = _email == "orion@gmail.com"
+      ? Colors.red
+      : const Color.fromARGB(255, 3, 11, 30); // Default background color
 
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 8.0, horizontal: 16.0),
-                      child: Column(
-                        crossAxisAlignment: isCurrentUser
-                            ? CrossAxisAlignment.end
-                            : CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: isCurrentUser
-                                ? MainAxisAlignment.end
-                                : MainAxisAlignment.start,
-                            children: [
-                              if (!isCurrentUser)
-                                CircleAvatar(
-                                  radius: 16,
-                                  backgroundColor: Colors.blueAccent,
-                                  child: Text(
-                                    sender[0].toUpperCase(),
-                                    style: TextStyle(color: Colors.white),
-                                  ),
-                                ),
-                              SizedBox(width: 8),
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: isCurrentUser
-                                      ? const Color.fromARGB(255, 220, 220, 220)
-                                      : const Color.fromARGB(255, 35, 6, 82),
-                                  borderRadius:
-                                      BorderRadius.all(Radius.circular(18)),
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 16, vertical: 12),
-                                constraints: BoxConstraints(
-                                  maxWidth:
-                                      MediaQuery.of(context).size.width * 0.6,
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      sender,
-                                      style: TextStyle(
-                                        color: isCurrentUser
-                                            ? const Color.fromARGB(
-                                                255, 35, 6, 82)
-                                            : const Color.fromARGB(
-                                                255, 220, 220, 220),
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 10,
-                                      ),
-                                    ),
-                                    SizedBox(height: 4),
-                                    Text(
-                                      message,
-                                      style: TextStyle(
-                                        color: isCurrentUser
-                                            ? const Color.fromARGB(
-                                                255, 35, 6, 82)
-                                            : const Color.fromARGB(
-                                                255, 220, 220, 220),
-                                        fontSize: 16,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 4),
-                          Text(
-                            '${sentAt.hour}:${sentAt.minute < 10 ? '0${sentAt.minute}' : sentAt.minute}',
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _messageController,
-                    focusNode: _focusNode,
-                    decoration: InputDecoration(
-                      hintText: 'Type a message...',
-                      hintStyle: TextStyle(color: Colors.white54),
-                      filled: true,
-                      fillColor: const Color.fromARGB(113, 63, 63, 63),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(30.0),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
+  return Scaffold(
+    backgroundColor: backgroundColor,
+    appBar: AppBar(
+      backgroundColor: backgroundColor,
+      title: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 4.0),
+                child: CircleAvatar(
+                  radius: 20,
+                  backgroundColor: Colors.blueAccent,
+                  child: Text(
+                    _groupName != null ? _groupName![0].toUpperCase() : '',
                     style: TextStyle(color: Colors.white),
                   ),
                 ),
-                IconButton(
-                  icon: Icon(
-                    Icons.send,
-                    color: const Color.fromARGB(255, 81, 18, 123),
+              ),
+              SizedBox(width: 12),
+              Column(
+                children: [
+                  Text(
+                    _groupName ?? 'Group Chat',
+                    style: TextStyle(
+                      color: const Color.fromARGB(255, 255, 255, 255),
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                  onPressed: () => _sendMessage(_messageController.text),
-                ),
-              ],
+                  if (_groupCode != null)
+                    Text(
+                      _groupCode!,
+                      style: TextStyle(
+                        color: const Color.fromARGB(250, 124, 47, 191),
+                        fontSize: 10,
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+      leading: IconButton(
+        icon: Icon(Icons.arrow_back,
+            color: const Color.fromARGB(250, 124, 47, 191)),
+        onPressed: () => Navigator.pop(context),
+      ),
+      actions: [
+        IconButton(
+          icon: Icon(Icons.article,
+              color: const Color.fromARGB(250, 124, 47, 191)),
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) =>
+                      ReferencesScreen(groupId: widget.groupId)),
+            );
+          },
+        ),
+      ],
+    ),
+    body: Column(
+      children: [
+        if (_hasGeneratedResponse)
+          Container(
+            color: Colors.yellow.withOpacity(0.2),
+            padding: const EdgeInsets.symmetric(vertical: 10.0),
+            child: Center(
+              child: Icon(Icons.notifications_active, color: Colors.yellow),
+            ),
+          ),
+        Expanded(
+          child: StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('groups')
+                .doc(widget.groupId)
+                .collection('messages')
+                .orderBy('sentAt', descending: true)
+                .snapshots(),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData || snapshot.data == null) {
+                return Center(
+                  child: Text(
+                    'No messages yet. Join or create a group.',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                );
+              }
+              final messages = snapshot.data!.docs;
+              return ListView.builder(
+                controller: _scrollController,
+                reverse: true,
+                itemCount: messages.length,
+                itemBuilder: (context, index) {
+                  final message = messages[index]['message'];
+                  final sender = messages[index]['sender'];
+                  final email = messages[index]['email'];
+                  final sentAt =
+                      (messages[index]['sentAt'] as Timestamp).toDate();
+                  
+                  final isCurrentUser = email == _email;
+final isOrion = email == 'orion@orion.com';
+
+return Padding(
+  padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+  child: Column(
+    crossAxisAlignment:
+        isCurrentUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+    children: [
+      Row(
+        mainAxisAlignment:
+            isCurrentUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+        children: [
+          if (!isCurrentUser && !isOrion)
+            CircleAvatar(
+              radius: 16,
+              backgroundColor: Colors.blueAccent,
+              child: Text(
+                sender[0].toUpperCase(),
+                style: const TextStyle(color: Colors.white),
+              ),
+            ),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Container(
+              decoration: BoxDecoration(
+                color: isOrion
+                    ? const Color.fromARGB(255, 12, 162, 147)
+                    : isCurrentUser
+                        ? const Color.fromARGB(255, 220, 220, 220)
+                        : const Color.fromARGB(255, 35, 6, 82),
+                borderRadius: BorderRadius.circular(18),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              constraints: BoxConstraints(
+                maxWidth: isOrion?(MediaQuery.of(context).size.width * 0.9):(MediaQuery.of(context).size.width * 0.6),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (!isOrion) 
+                  Text(
+                    sender,
+                    style: TextStyle(
+                      color: isCurrentUser
+                          ? const Color.fromARGB(255, 35, 6, 82)
+                          : const Color.fromARGB(255, 220, 220, 220),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 10,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  isOrion && message.contains("http")
+                  ? Align(
+                    alignment: Alignment.center, // Center align the RichText widget
+                    child: RichText(
+                      textAlign: TextAlign.left, // Center-align the text content
+                      text: TextSpan(
+                        children: [
+                          // Non-link part of the message
+                          TextSpan(
+                            text: message.split('http')[0], // Text before the link
+                            style: TextStyle(
+                              color: Color.fromARGB(255, 221, 221, 221),
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          // Link part of the message
+                          TextSpan(
+                            text: "http" + message.split('http')[1], // The link part
+                            style: TextStyle(
+                              color: const Color.fromARGB(255, 110, 33, 243),
+                              fontSize: 15,
+                              fontWeight: FontWeight.w900,
+                              decoration: TextDecoration.underline,
+                            ),
+                            recognizer: TapGestureRecognizer()
+                              ..onTap = () => _launchURL("http" + message.split('http')[1]),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                      : Text(
+                          message,
+                          style: TextStyle(
+                            color: isCurrentUser
+                                ? const Color.fromARGB(255, 35, 6, 82)
+                                : const Color.fromARGB(255, 220, 220, 220),
+                            fontSize: 16,
+                          ),
+                        ),
+                ],
+              ),
             ),
           ),
         ],
       ),
-    );
-  }
+      const SizedBox(height: 4),
+      Text(
+        '${sentAt.hour}:${sentAt.minute < 10 ? '0${sentAt.minute}' : sentAt.minute}',
+        style: const TextStyle(
+          color: Colors.white70,
+          fontSize: 12,
+        ),
+      ),
+    ],
+  ),
+);
+
+                },
+              );
+            },
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _messageController,
+                  focusNode: _focusNode,
+                  decoration: InputDecoration(
+                    hintText: 'Type a message...',
+                    hintStyle: TextStyle(color: Colors.white54),
+                    filled: true,
+                    fillColor: const Color.fromARGB(113, 63, 63, 63),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(30.0),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+              IconButton(
+                icon: Icon(
+                  Icons.send,
+                  color: const Color.fromARGB(255, 81, 18, 123),
+                ),
+                onPressed: () => _sendMessage(_messageController.text),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
 }

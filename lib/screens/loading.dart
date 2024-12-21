@@ -1,3 +1,4 @@
+import 'package:orion/components/loader2.dart';
 import 'package:flutter/material.dart';
 
 class LoadingScreen extends StatefulWidget {
@@ -61,6 +62,8 @@ class _LoadingScreenState extends State<LoadingScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            // Use your custom loader here
+            CustomLoader_2(1,size: 150.0), // Adjust size as needed
 
             SizedBox(height: 20),
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../components/loader.dart';
 import 'login.dart'; // Import LoginScreen
 import 'signup.dart'; // Import SignupScreen
 
@@ -64,6 +65,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             // The custom loader (no animation)
+            CustomLoader(size: 150.0),
 
             SizedBox(height: 20), // Spacing
 

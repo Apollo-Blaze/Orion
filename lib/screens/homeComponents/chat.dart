@@ -4,7 +4,6 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
-import 'package:orion/components/loader.dart';
 import 'package:orion/screens/homeComponents/chatComponent/GeminiHandler.dart';
 import 'package:orion/screens/homeComponents/chatComponent/reference.dart';
 import 'package:orion/screens/homeComponents/minutes.dart';
@@ -90,9 +89,17 @@ class _ChatScreenState extends State<ChatScreen> {
           borderRadius: BorderRadius.all(Radius.circular(16)),
         ),
         backgroundColor:
-            Color.fromARGB(255, 20, 6, 43), // Dark purple background
+            Color.fromARGB(255, 35, 6, 82), // Dark purple background
         actionsPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
         actions: [
+          
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(
+              "Cancel",
+              style: TextStyle(color: Colors.white70),
+            ),
+          ),
           TextButton(
             onPressed: () async {
               if (fromDateTime != null && toDateTime != null) {
@@ -110,20 +117,12 @@ class _ChatScreenState extends State<ChatScreen> {
               }
               // Navigator.of(context).pop();
             },
-            child: TextButton(
-            onPressed: () => Navigator.of(context).pop(),
             child: Text(
-              "Cancel",
-              style: TextStyle(color: const Color.fromARGB(224, 231, 45, 45)),
-            ),
-          ),
-          ),
-            Text(
               "Next",
               style:
-                  TextStyle(color: const Color.fromARGB(255, 255, 255, 255), fontWeight: FontWeight.bold),
+                  TextStyle(color: Colors.purple, fontWeight: FontWeight.bold),
             ),
-          
+          ),
         ],
       ),
     );
@@ -221,7 +220,7 @@ class _ChatScreenState extends State<ChatScreen> {
         });
 
         // Set a timer to hide the notification icon after 10 seconds
-        Timer(Duration(seconds: 10), () {
+        Timer(Duration(seconds: 6), () {
           setState(() {
             _hasGeneratedResponse = false;
           });
@@ -272,7 +271,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     ),
                   ),
                 ),
-                SizedBox(width: 12),
+                SizedBox(width: 16),
                 Column(
                   children: [
                     Text(
@@ -288,7 +287,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         _groupCode!,
                         style: TextStyle(
                           color: const Color.fromARGB(250, 124, 47, 191),
-                          fontSize: 10,
+                          fontSize: 11,
                         ),
                       ),
                   ],
@@ -299,20 +298,20 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
         leading: IconButton(
           icon: Icon(Icons.arrow_back,
-              color: const Color.fromARGB(250, 124, 47, 191)),
+              color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
           IconButton(
             icon: Icon(Icons.article,
-                color: const Color.fromARGB(250, 124, 47, 191)),
+                color: const Color.fromARGB(248, 241, 232, 249)),
             onPressed: () {
               showDateTimeSelectionDialog(context, widget.groupId);
             },
           ),
           IconButton(
-            icon: Icon(Icons.auto_fix_high,
-                color: const Color.fromARGB(250, 124, 47, 191)),
+            icon: Icon(Icons.auto_awesome_rounded,
+                color: const Color.fromARGB(249, 211, 161, 25)),
             onPressed: () {
               Navigator.push(
                 context,
@@ -328,12 +327,11 @@ class _ChatScreenState extends State<ChatScreen> {
         children: [
           if (_hasGeneratedResponse)
             Container(
-              color: Colors.transparent,
               padding: const EdgeInsets.symmetric(vertical: 10.0),
               child: Center(
                 child: SpinKitPulsingGrid(
-          color: const Color.fromARGB(255, 225, 185, 84), // Change to your desired color
-          size: 25,        // Adjust the size of the grid
+          color: Colors.yellow[700], // Change to your desired color
+          size: 25.0,        // Adjust the size of the grid
         ),
               ),
             ),
@@ -530,17 +528,28 @@ class _ChatScreenState extends State<ChatScreen> {
                         borderRadius: BorderRadius.circular(30.0),
                         borderSide: BorderSide.none,
                       ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(30.0),  // Ensure the border radius is the same
+                      ),
                     ),
                     style: TextStyle(color: Colors.white),
                   ),
                 ),
-                IconButton(
-                  icon: Icon(
-                    Icons.send,
-                    color: const Color.fromARGB(255, 81, 18, 123),
+                SizedBox(width: 10),
+                Container(
+                  decoration: BoxDecoration(
+                    color: const Color.fromARGB(255, 56, 13, 122), // Background color
+                    borderRadius: BorderRadius.circular(30.0), // Optional: rounded corners
                   ),
-                  onPressed: () => _sendMessage(_messageController.text),
-                ),
+                  child: IconButton(
+                    color: const Color.fromARGB(255, 202, 196, 204),
+                    icon: Icon(
+                      Icons.send_rounded,
+                      color: const Color.fromARGB(255, 205, 199, 206),
+                    ),
+                    onPressed: () => _sendMessage(_messageController.text),
+                  ),
+                )
               ],
             ),
           ),
